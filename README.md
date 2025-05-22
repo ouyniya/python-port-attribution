@@ -2,13 +2,17 @@
 
 This project is a web-based interactive tool built with Streamlit for performing Brinson Attribution Analysis (1986 model). It helps portfolio managers and analysts break down portfolio performance into allocation, selection, and interaction effects by sector.
 
+## 🎯 Why I'm Doing This:
+
+Because investors don’t just want to know how much return they got — they want to know where it came from. And I want my Streamlit app to tell that story — clearly, beautifully, interactively. 📊🔍
+
 
 ## 🧪 Demo
 
 This project was made with ❤️ by ouyniya | nysdev.com
 
 You can try the demo here:  
-👉 https://your-demo-link.com
+👉 https://nysdev.com
 
 
 ## 🚀 Features
@@ -49,11 +53,11 @@ Sample portfolio and benchmark files are provided in the data/ folder for demons
 - This demo is provided for educational and evaluation purposes only. We do not guarantee the accuracy, completeness, or fitness for any particular purpose.
 - In traditional Brinson attribution models, residual effect often arise due to compounding returns. These residuals can obscure a manager’s true skill or bias interpretations of outperformance or underperformance. 
 
-  To address these, adjustments have been applied using appropriate methods such as the Frongello method (or similar).  
+  To address these, adjustments have been applied using appropriate methods such as the Frongello method (2002) or similar.  
 
-  📌 **Note:** The Frongello method is a refinement technique used in performance attribution to more accurately allocate returns, particularly when analyzing multi-period or time-linked performance.
+  📌 **Note:** The Frongello method (2002) is a refinement technique used in performance attribution to more accurately allocate returns, particularly when analyzing multi-period or time-linked performance.
 
-  In this tool, we have applied the Frongello adjustment to ensure a more accurate representation of portfolio management decisions across time.
+  In this tool, we have applied the Frongello (2002) adjustment to ensure a more accurate representation of portfolio management decisions across time.
 
 
 

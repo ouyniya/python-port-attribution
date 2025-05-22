@@ -295,70 +295,6 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         + attrib_summary["Interaction"]
     )
 
-
-    # adjusted attribution
-    attrib_summary_with_return = attrib_summary
-    attrib_summary_with_return["p_return"] = performance_result["port_return"]
-    attrib_summary_with_return["bm_return"] = performance_result["bm_returns"]
-    st.write(attrib_summary_with_return)
-
-    allocation_df_adj = pd.DataFrame()
-    selection_df_adj = pd.DataFrame()
-    interaction_df_adj = pd.DataFrame()
-
-    for i in range(1, len(dates)):
-        date = dates[i]
-        prev_date = dates[i - 1]
-        start_date = dates[1]
-
-        al = attrib_summary_with_return["Allocation"][date]
-        sl = attrib_summary_with_return["Selection"][date]
-        inn = attrib_summary_with_return["Interaction"][date]
-
-        if i == 1:
-            allocation_adj = al
-            selection_adj = sl
-            interaction_adj = inn
-
-            allocation_df_adj.loc[date, "allocation"] = allocation_adj
-            selection_df_adj.loc[date, "selection"] = selection_adj
-            interaction_df_adj.loc[date, "interaction"] = interaction_adj
-        else:
-            sum_allocation_adj = allocation_df_adj.iloc[:].sum()[-1]
-            sum_selection_adj = selection_df_adj.iloc[:].sum()[-1]
-            sum_interaction_adj = interaction_df_adj.iloc[:].sum()[-1]
-
-            curr_bm = attrib_summary_with_return["bm_return"][date]
-            cum_prev_p = ((
-                1 + attrib_summary_with_return["p_return"][start_date:prev_date]
-            ).cumprod())[-1]
-
-            allocation_adj = (al * cum_prev_p) + (curr_bm * sum_allocation_adj)
-            selection_adj = (sl * cum_prev_p) + (curr_bm * sum_selection_adj)
-            interaction_adj = (inn * cum_prev_p) + (curr_bm * sum_interaction_adj)
-
-            # เพิ่มแต่ละ column เป็น date
-            allocation_df_adj.loc[date, "allocation"] = allocation_adj
-            selection_df_adj.loc[date, "selection"] = selection_adj
-            interaction_df_adj.loc[date, "interaction"] = interaction_adj
-
-    
-    attrib_summary_adj = pd.DataFrame()
-    attrib_summary_adj['allocation'] = allocation_df_adj
-    attrib_summary_adj['selection'] = selection_df_adj
-    attrib_summary_adj['interaction'] = interaction_df_adj
-    attrib_summary_adj['total effect'] = attrib_summary_adj['allocation'] + attrib_summary_adj['selection'] + attrib_summary_adj['interaction'] 
-
-    total_effect_all_period = attrib_summary_adj['total effect'].sum()
-
-
-    st.write("attrib_summary")
-    st.write(attrib_summary)
-    st.write(attrib_summary_adj)
-
-
-    
-
     # คำนวณ attribution แบบ sector-level (รวมทุกวัน)
     sector_allocation = allocation_df.sum(axis=1)
     sector_selection = selection_df.sum(axis=1)
@@ -378,10 +314,10 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     sector_summary = sector_summary.sort_values(by=["Total"], ascending=False)
 
     # total effect
-    total_allocation_effect = attrib_summary_adj.iloc[:, 0].sum()
-    total_selection_effect = attrib_summary_adj.iloc[:, 1].sum()
-    total_interaction_effect = attrib_summary_adj.iloc[:, 2].sum()
-    total_attribution_effect = attrib_summary_adj.iloc[:, 3].sum()
+    total_allocation_effect = attrib_summary.iloc[:, 0].sum()
+    total_selection_effect = attrib_summary.iloc[:, 1].sum()
+    total_interaction_effect = attrib_summary.iloc[:, 2].sum()
+    total_attribution_effect = attrib_summary.iloc[:, 3].sum()
 
     # as of
     # Get latest values
@@ -689,10 +625,8 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         size_max=60,  # optional: to control max bubble size
     )
     fig.update_traces(
-        hovertemplate="%{text}"
-        + "<br><b>Active Weight</b>: %{x:.2%}"
-        + "<br><b>Total Return</b>: %{y:.2%}<br>",
-        texttemplate=" ",
+        hovertemplate="%{text}" + "<br><b>Active Weight</b>: %{x:.2%}" + "<br><b>Total Return</b>: %{y:.2%}<br>",
+        texttemplate=" "
     )
 
     # Show in Streamlit
