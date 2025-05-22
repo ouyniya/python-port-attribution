@@ -12,7 +12,7 @@ Because investors don’t just want to know how much return they got — they wa
 This project was made with ❤️ by ouyniya | nysdev.com
 
 You can try the demo here:  
-👉 https://nysdev.com
+👉 https://python-port-attribution-by-nysdev.streamlit.app/
 
 ![screenshot-attribution-mutual-fund](images/screenshot-attribution-mutual-fund-ezgif.com-resize.gif)
 
