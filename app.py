@@ -1,3 +1,20 @@
+# Attribution Tool
+# Copyright (C) 2025 [Niya Somkerd | nysdev.com]
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -20,10 +37,13 @@ st.markdown(
                 <p style='font-size: 4rem; font-weight: bold;'>Equity Mutual Fund</p>
                 <p style='font-size: 3rem; font-weight: semi-bold;'>Performance Attribution</p>
             </div>
-            <hr />
             """,
     unsafe_allow_html=True,
 )
+
+st.warning("This app is licensed under AGPL v3.0 – source code available.")
+
+st.divider()
 
 # === Sample Files Section ===
 with st.chat_message("assistant"):
@@ -99,7 +119,12 @@ def validate_data(prices, fund_weights, benchmark_weights, sector_map):
 
 # Aggregate Daily Returns & Weights to Sector Level
 def calc_agg_daily_return_weight_to_sector_level(
-    sector_map, prices, fund_weights, benchmark_weights
+    sector_map,
+    prices,
+    fund_weights,
+    benchmark_weights,
+    fund_weights_raw,
+    benchmark_weights_raw,
 ):
 
     returns = prices.pct_change().fillna(0)
@@ -110,6 +135,8 @@ def calc_agg_daily_return_weight_to_sector_level(
     benchmark_sector_returns = {}
     fund_sector_weights = {}
     benchmark_sector_weights = {}
+    benchmark_sector_weights_raw = {}
+    fund_sector_weights_raw = {}
 
     dates = returns.index
 
@@ -119,14 +146,21 @@ def calc_agg_daily_return_weight_to_sector_level(
         ret = returns.loc[date]
         fw = fund_weights.loc[date]
         bw = benchmark_weights.loc[date]
+        bwr = benchmark_weights_raw.loc[date]
+        fwr = fund_weights_raw.loc[date]
 
         # Combine into DataFrame
         df = pd.DataFrame(
             {"return": ret, "fw": fw, "bw": bw, "sector": stock_to_sector}
         )
 
+        df2 = pd.DataFrame(
+            {"return": ret, "fwr": fwr, "bwr": bwr, "sector": stock_to_sector}
+        )
+
         # Group by sector
         grouped = df.groupby("sector")
+        grouped2 = df2.groupby("sector")
 
         fund_sector_returns[date] = grouped.apply(
             lambda x: np.sum(x["fw"] * x["return"])
@@ -137,11 +171,16 @@ def calc_agg_daily_return_weight_to_sector_level(
         fund_sector_weights[date] = grouped["fw"].sum()
         benchmark_sector_weights[date] = grouped["bw"].sum()
 
+        fund_sector_weights_raw[date] = grouped2["fwr"].sum()
+        benchmark_sector_weights_raw[date] = grouped2["bwr"].sum()
+
     return (
         fund_sector_returns,
         benchmark_sector_returns,
         fund_sector_weights,
+        fund_sector_weights_raw,
         benchmark_sector_weights,
+        benchmark_sector_weights_raw,
     )
 
 
@@ -172,9 +211,11 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     :param sector_map (pandas.DataFrame):
     """
     # shift weight
+    fund_weights_raw = fund_weights
     fund_weights = fund_weights.shift(1, axis=0)
     fund_weights = fund_weights.fillna(method="bfill")  # fill with next row
 
+    benchmark_weights_raw = benchmark_weights
     benchmark_weights = benchmark_weights.shift(1, axis=0)
     benchmark_weights = benchmark_weights.fillna(method="bfill")  # fill with next row
 
@@ -188,15 +229,29 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         fund_sector_returns,
         benchmark_sector_returns,
         fund_sector_weights,
+        fund_sector_weights_raw,
         benchmark_sector_weights,
+        benchmark_sector_weights_raw,
     ) = calc_agg_daily_return_weight_to_sector_level(
-        sector_map, prices, fund_weights, benchmark_weights
+        sector_map,
+        prices,
+        fund_weights,
+        benchmark_weights,
+        fund_weights_raw,
+        benchmark_weights_raw,
     )
 
     fund_sector_returns = pd.DataFrame(fund_sector_returns)
     benchmark_sector_returns = pd.DataFrame(benchmark_sector_returns)
     fund_sector_weights = pd.DataFrame(fund_sector_weights)
     benchmark_sector_weights = pd.DataFrame(benchmark_sector_weights)
+    benchmark_sector_weights_raw = pd.DataFrame(benchmark_sector_weights_raw)
+    fund_sector_weights_raw = pd.DataFrame(fund_sector_weights_raw)
+
+    fund_sector_returns_tr = fund_sector_returns / fund_sector_weights
+    fund_sector_returns_tr = fund_sector_returns_tr.fillna(0)
+    cum_fund_sector_returns_tr = (1 + fund_sector_returns_tr).cumprod(axis=1) - 1
+    last_cum_fund_sector_returns_tr = cum_fund_sector_returns_tr.iloc[:, -1]
 
     allocation_df = pd.DataFrame()
     selection_df = pd.DataFrame()
@@ -309,12 +364,10 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     best_sector = sector_summary.index[0]
     worst_sector = sector_summary.index[-1]
 
-
     best_driver = sector_summary.loc[best_sector][["Allocation", "Selection"]].idxmax()
     worst_driver = sector_summary.loc[worst_sector][
         ["Allocation", "Selection"]
     ].idxmin()
-
 
     st.markdown("")
     st.markdown("")
@@ -328,7 +381,6 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     st.markdown(
         f":red-badge[:material/close:] The **worst contributing sector** is **{worst_sector}**, mainly due to **{worst_driver} effect**."
     )
-
 
     st.divider()
 
@@ -467,14 +519,16 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     st.markdown("")
     st.markdown("**Attribution Effect (%)**")
     chart_data = pd.DataFrame(
-    {
-        "sector": sector_summary.index,
-        "Total Effect (%)": sector_summary['Total'],
-        "sector":  sector_summary.index,
-    }
+        {
+            "sector": sector_summary.index,
+            "Total Effect (%)": sector_summary["Total"],
+            "sector": sector_summary.index,
+        }
     )
 
-    st.bar_chart(chart_data, x="sector", y="Total Effect (%)", color="sector", horizontal=True)  
+    st.bar_chart(
+        chart_data, x="sector", y="Total Effect (%)", color="sector", horizontal=True
+    )
 
     # allocated effect
     fig2 = go.Figure()
@@ -493,7 +547,6 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
             x=sector_summary.index,
             y=sector_summary["Selection"],
             name="Selection",
-
         )
     )
 
@@ -502,7 +555,6 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
             x=sector_summary.index,
             y=sector_summary["Interaction"],
             name="Interaction",
-
         )
     )
 
@@ -522,13 +574,10 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         legend=dict(x=1, y=1),
         height=500,
         yaxis_tickformat=".2f",
-        barmode="group"  # <--- Stacked bars
+        barmode="group",  # <--- Stacked bars
     )
 
     st.plotly_chart(fig2, use_container_width=True, key="Attribution_effect")
-
-
-
 
     st.write("Top 5 Best Performing Sectors (Total Attribution):")
     st.dataframe(sector_summary.head(5).style.background_gradient(cmap="Greens"))
@@ -537,6 +586,56 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
 
     st.write("Bottom 5 Worst Performing Sectors (Total Attribution):")
     st.dataframe(sector_summary.head(5).style.background_gradient(cmap="Reds"))
+
+    # == active weight ==
+    st.subheader("📊 Active Weight Map")
+
+    active_weight_raw = fund_sector_weights_raw - benchmark_sector_weights_raw
+    sum_weight = active_weight_raw.sum(axis=1)
+    count_weight = active_weight_raw.count(axis=1)
+    active_weight = sum_weight / count_weight
+
+    last_cum_fund_sector_returns_tr_dataframe = pd.DataFrame(
+        last_cum_fund_sector_returns_tr
+    )
+    last_cum_fund_sector_returns_tr_dataframe.columns = ["Total Return (%)"]
+    last_cum_fund_sector_returns_tr_dataframe["Avg. Active Weight (%)"] = active_weight
+
+    # Sample data
+    data = {
+        "Sector": active_weight.index,
+        "Active Weight": active_weight,
+        "Total Return": last_cum_fund_sector_returns_tr,
+    }
+    df = pd.DataFrame(data)
+
+    # Add absolute value column for bubble size
+    df["Bubble Size"] = df["Active Weight"].abs()
+
+    # Create bubble chart
+    fig = px.scatter(
+        df,
+        x="Active Weight",
+        y="Total Return",
+        size="Bubble Size",
+        color="Total Return",
+        color_continuous_scale=["red", "white", "green"],
+        text="Sector",
+        title="Avg. Active Weight vs Total Return (Bubble Size = Magnitude of Active Weight)",
+        size_max=60,  # optional: to control max bubble size
+    )
+    fig.update_traces(
+        hovertemplate="%{text}" + "<br><b>Active Weight</b>: %{x:.2%}" + "<br><b>Total Return</b>: %{y:.2%}<br>",
+        texttemplate=" "
+    )
+
+    # Show in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+    # event = st.plotly_chart(fig, key="iris", on_select="rerun")
+    # selected_sector = event.selection.points[0]['hovertext']
+    # st.write(sector_map)
+
+    st.dataframe(last_cum_fund_sector_returns_tr_dataframe * 100)
 
 
 if prices_file and fund_file and benchmark_file:
