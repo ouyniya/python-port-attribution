@@ -83,19 +83,18 @@ with st.chat_message("assistant"):
     benchmark_file = st.file_uploader("🏦 Benchmark Weights CSV", type="csv")
     sector_file = st.file_uploader("🗂️ Stock-Sector Map CSV", type="csv")
 
-    prices_file = "data/prices.csv"
-    fund_file = "data/fund_weights.csv"
-    benchmark_file = "data/benchmark_weights.csv"
-    sector_file = "data/stock_sector_map.csv"
+    # prices_file = "data/prices.csv"
+    # fund_file = "data/fund_weights.csv"
+    # benchmark_file = "data/benchmark_weights.csv"
+    # sector_file = "data/stock_sector_map.csv"
 
 
-@st.cache_data
+# @st.cache_data
 def load_csv(file, index_col=0):
     try:
         df = pd.read_csv(file, index_col=index_col, parse_dates=True)
-        return df
+        return True
     except Exception as e:
-        st.error(f"Error loading file: {e}")
         return None
 
 
@@ -115,7 +114,6 @@ def validate_data(prices, fund_weights, benchmark_weights, sector_map):
 
 
 # === Analysis Section ===
-
 
 # Aggregate Daily Returns & Weights to Sector Level
 def calc_agg_daily_return_weight_to_sector_level(
@@ -300,7 +298,6 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     attrib_summary_with_return = attrib_summary
     attrib_summary_with_return["p_return"] = performance_result["port_return"]
     attrib_summary_with_return["bm_return"] = performance_result["bm_returns"]
-    st.write(attrib_summary_with_return)
 
     allocation_df_adj = pd.DataFrame()
     selection_df_adj = pd.DataFrame()
@@ -350,15 +347,7 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     attrib_summary_adj['total effect'] = attrib_summary_adj['allocation'] + attrib_summary_adj['selection'] + attrib_summary_adj['interaction'] 
 
     total_effect_all_period = attrib_summary_adj['total effect'].sum()
-
-
-    st.write("attrib_summary")
-    st.write(attrib_summary)
-    st.write(attrib_summary_adj)
-
-
     
-
     # คำนวณ attribution แบบ sector-level (รวมทุกวัน)
     sector_allocation = allocation_df.sum(axis=1)
     sector_selection = selection_df.sum(axis=1)
@@ -559,7 +548,7 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         )
 
     # สรุปข้อความแบบ Insight
-    st.markdown("**📝 Insight Summary**")
+    # st.markdown("**📝 Insight Summary**")
 
     best_sector = sector_summary.index[-1]
     worst_sector = sector_summary.index[0]
@@ -569,12 +558,12 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
         ["Allocation", "Selection"]
     ].idxmin()
 
-    st.markdown(
-        f"""
-    - ✅ The **best contributing sector** is **{best_sector}**, mainly due to **{best_driver} effect**.
-    - ❌ The **worst contributing sector** is **{worst_sector}**, mainly due to **{worst_driver} effect**.
-    """
-    )
+    # st.markdown(
+    #     f"""
+    # - ✅ The **best contributing sector** is **{best_sector}**, mainly due to **{best_driver} effect**.
+    # - ❌ The **worst contributing sector** is **{worst_sector}**, mainly due to **{worst_driver} effect**.
+    # """
+    # )
 
     # {"✅ Positive contribution" if total_pct > 0 else "⚠️ Negative contribution"} to performance.
 
@@ -704,14 +693,26 @@ def calc_brinson_attribution_1986(prices, fund_weights, benchmark_weights, secto
     st.dataframe(last_cum_fund_sector_returns_tr_dataframe * 100)
 
 
-if prices_file and fund_file and benchmark_file:
-    prices = pd.read_csv(prices_file, index_col=0, parse_dates=True)
-    fund_weights = pd.read_csv(fund_file, index_col=0, parse_dates=True)
-    benchmark_weights = pd.read_csv(benchmark_file, index_col=0, parse_dates=True)
-    sector_map = pd.read_csv(sector_file)
+if st.button("Submit"):
+    try:
+        # isPrices = load_csv(prices_file)
+        # isFund = load_csv(fund_file)
+        # isBM = load_csv(benchmark_file)
+        # isSectorMapping = load_csv(sector_file)
 
-    if len(prices) == len(fund_weights) and len(prices) == len(benchmark_weights):
-        # if st.button("Submit"):
-        calc_brinson_attribution_1986(
-            prices, fund_weights, benchmark_weights, sector_map
-        )
+        if prices_file and fund_file and benchmark_file and sector_file:
+            prices = pd.read_csv(prices_file, index_col=0, parse_dates=True)
+            fund_weights = pd.read_csv(fund_file, index_col=0, parse_dates=True)
+            benchmark_weights = pd.read_csv(benchmark_file, index_col=0, parse_dates=True)
+            sector_map = pd.read_csv(sector_file)
+
+            if len(prices) == len(fund_weights) and len(prices) == len(benchmark_weights):
+                calc_brinson_attribution_1986(
+                    prices, fund_weights, benchmark_weights, sector_map
+                )
+        else:
+            st.warning(f"⚠️ Please upload all files!")
+    except Exception as e:
+        st.error(f"Error: {e}")
+    
+
