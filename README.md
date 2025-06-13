@@ -63,14 +63,3 @@ Sample portfolio and benchmark files are provided in the data/ folder for demons
   In this tool, we have applied the Frongello (2002) adjustment to ensure a more accurate representation of portfolio management decisions across time.
 
 
-
-## ⚖️ License & Usage
-
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-For full details, see the [LICENSE](./LICENSE) file or visit [gnu.org/licenses/agpl-3.0](https://www.gnu.org/licenses/agpl-3.0).
-
-
-**💬 Kind Request:**  
-  📌 While commercial use is allowed, we kindly ask that you contact us via support@nysdev.com for permission if you plan to use it in a commercial setting.
-
